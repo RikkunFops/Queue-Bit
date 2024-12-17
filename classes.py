@@ -1,19 +1,21 @@
 import discord
 
-class Guild():
+class QbGuild():
     def __init__(self, guildObj):
             self.discGuild : discord.Guild = guildObj
             self.owner : discord.User = self.discGuild.owner
-            self.guildAdmins = { self.owner : ["All"] }
+            self.guildAdmins = { self.owner : ["All", "Owner"] }
             self.isSetup = False
-            self.GuildQueues : Queue = []
+            self.GuildQueues = []
 
 class Queue():
     def __init__(self, guild, name, type, identifier):
-        self.guild : Guild = guild
+        self.guild : QbGuild = guild
         self.QueueName = name
         self.QueueID = identifier
         self.QueueType = type
+        self.MaxSize = 5
+        self.MinSize = 4
         self.QueueMods = {
             # discord.User : Permissions
         }

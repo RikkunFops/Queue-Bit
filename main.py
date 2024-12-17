@@ -49,10 +49,10 @@ async def on_guild_join(guild: discord.Guild):
             mem = entry.user
             if entry.target.id == discClient.user.id:
                 if mem == guild.owner:
-                    await mem.send("Thank you for inviting me")
+                    await mem.send("Thank you for inviting me. \nHi, I'm QuBit! \nI'm a bot designed to help you create queues for members to join and band together.")
                 else:
                         await mem.send("Thank you for inviting me")
-                        await guild.owner.send("I was added to your server")
+                        await guild.owner.send("I was added to your server! \nHi, I'm QuBit! \nI'm a bot designed to help you create queues for members to join and band together.")
 
 @discClient.hybrid_command(
         name="support",
@@ -60,6 +60,18 @@ async def on_guild_join(guild: discord.Guild):
         )
 async def support(ctx):
     await ctx.send("You can get support from @RikkunFops. \nPlease remember to be patient and respectful.", ephemeral=True)
+
+@discClient.hybrid_command(
+          name="update",
+          description="secret dev command shhh"
+)
+async def update(ctx):
+    synced = await discClient.tree.sync()
+    if synced:
+        await ctx.send("Successfully updated commands")
+    else:
+        await ctx.send("Could not update")
+     
 
 @discClient.hybrid_command()
 async def ping(ctx): 
