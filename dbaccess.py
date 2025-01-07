@@ -3,6 +3,10 @@ from urllib.parse import urlparse
 import mariadb
 from dotenv import load_dotenv
 from cogs.guild import QbGuild
+import settings
+
+standard_logger = settings.logging.getLogger("discord")
+error_logger = settings.logging.getLogger("bot")
 
 loadedGuilds = {}
 loadedUsers = {}
@@ -31,38 +35,36 @@ def getConn():
                 port=PORT,
                 database=SCHEMA
             )
-            print("Connection successful!")
+            standard_logger.info("Connection successful!")
             return conn
         
         except mariadb.Error as e:
-            print(f"Error connecting to the database: {e}")
+            error_logger.error(f"Error connecting to the database: {e}")
 
     else:
-        print("DATABASE_URL is not set in the environment.")
+        error_logger.error("DATABASE_URL is not set in the environment.")  
 
-    
-
-def endProgram(guildList):
+def saveProgram(guildDict):
     conn = getConn()
     try:
         if conn:
-            print("Trying to get cursor")
+            standard_logger.info("Saving data to the database...")
             cursor = conn.cursor()
 
-            for guild in guildList:
+            for guildId, guild in guildDict.items():
                 # Query to insert or update the guild
                 guildInsertOrUpdateQuery = """
-                INSERT INTO Guild (GuildId, OwnerId, IsSetup)
-                VALUES (%s, %s, %s)
+                INSERT INTO Guild (GuildId, OwnerId)
+                VALUES (%s, %s)
                 ON DUPLICATE KEY UPDATE
-                    OwnerId = VALUES(OwnerId),
-                    IsSetup = VALUES(IsSetup)
+                    GuildId = VALUES(GuildId),
+                    OwnerId = VALUES(OwnerId)
                 """
                 # Log guild data for debugging
-                print(f"Inserting/updating guild: {guild.discGuild.id}, {guild.discGuild.owner.id}, {guild.isSetup}")
+                error_logger.info(f"Inserting/updating guild: {guildId}, {guild.discGuild.owner.id}")
                 
                 # Values to be inserted or updated
-                guildValues = (guild.discGuild.id, guild.discGuild.owner.id, guild.isSetup)
+                guildValues = (guildId, guild.discGuild.owner.id)
                 
                 # Execute the guild query
                 cursor.execute(guildInsertOrUpdateQuery, guildValues)
@@ -71,52 +73,123 @@ def endProgram(guildList):
                 if len(guild.GuildQueues) > 0:
                     for queue in guild.GuildQueues:  # Assuming `queues` is a list of queue objects in the guild
                         queueInsertOrUpdateQuery = """
-                        INSERT INTO queues (GuildId, QueueName, QueueId, QueueType)
-                        VALUES (%s, %s, %s, %s)
+                        INSERT INTO queues (GuildId, QueueName, QueueId, QueueType, QueueMin, QueueMax, IsGlobal, GlobalID)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         ON DUPLICATE KEY UPDATE
+                            GuildId = VALUES(GuildId),
                             QueueName = VALUES(QueueName),
-                            QueueType = VALUES(QueueType)
+                            QueueType = VALUES(QueueType),
+                            QueueId = VALUES(QueueId),
+                            QueueMin = VALUES(QueueMin),
+                            QueueMax = VALUES(QueueMax),
+                            IsGlobal = VALUES(IsGlobal),
+                            GlobalID = VALUES(GlobalID)
                         """
                         # Log queue data for debugging
-                        print(f"Inserting/updating queue: GuildId={guild.discGuild.id}, QueueName={queue.QueueName}, QueueId={queue.QueueID}, QueueType={queue.QueueType}")
+                        error_logger.info(f"Inserting/updating queue: GuildId={guild.discGuild.id}, QueueName={queue.QueueName}, QueueId={queue.QueueIndex}, QueueType={queue.QueueType}, QueueMax={queue.MaxSize}, QueueMin={queue.MinSize}, IsGlobal={queue.IsGlobal}, GlobalID={queue.GlobalId}")
                         
                         # Values to be inserted or updated
-                        queueValues = (guild.discGuild.id, queue.QueueName, queue.QueueID, queue.QueueType)
+                        queueValues = (guild.discGuild.id, queue.QueueName, queue.QueueIndex, queue.QueueType, queue.MinSize, queue.MaxSize, queue.IsGlobal, queue.GlobalId)
                         
                         # Execute the queue query
                         cursor.execute(queueInsertOrUpdateQuery, queueValues)
 
             # Commit the transaction
             conn.commit()
-            print("Transaction committed successfully.")
+            error_logger.info("Transaction committed successfully.")
         else:
-            print("No connection to the database.")
+            error_logger.error("No connection to the database.")
     except mariadb.Error as e:
-        print(f"Error executing query: {e}")
+        error_logger.error(f"Error executing query: {e}")
         if conn:
             conn.rollback()  # Rollback the transaction on error
-            print("Transaction rolled back.")
+            error_logger.error("Transaction rolled back.")
     finally:
         if conn:
             conn.close()
-            print("Database connection closed.")
-    
+            error_logger.warning("Database connection closed.")
+
+def endProgram(guildDict):
+    conn = getConn()
+    try:
+        if conn:
+            standard_logger.info("Trying to get cursor")
+            cursor = conn.cursor()
+
+            for guildId, guild in guildDict.items():
+                # Query to insert or update the guild
+                guildInsertOrUpdateQuery = """
+                INSERT INTO Guild (GuildId, OwnerId)
+                VALUES (%s, %s)
+                ON DUPLICATE KEY UPDATE
+                    GuildId = VALUES(GuildId),
+                    OwnerId = VALUES(OwnerId)
+                """
+                # Log guild data for debugging
+                standard_logger.info(f"Inserting/updating guild: {guildId}, {guild.discGuild.owner.id}")
+                
+                # Values to be inserted or updated
+                guildValues = (guildId, guild.discGuild.owner.id)
+                
+                # Execute the guild query
+                cursor.execute(guildInsertOrUpdateQuery, guildValues)
+
+                # Insert or update each queue for this guild
+                if len(guild.GuildQueues) > 0:
+                    for queue in guild.GuildQueues:  # Assuming `queues` is a list of queue objects in the guild
+                        queueInsertOrUpdateQuery = """
+                        INSERT INTO queues (GuildId, QueueName, QueueId, QueueType, QueueMin, QueueMax, IsGlobal, GlobalID)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON DUPLICATE KEY UPDATE
+                            GuildId = VALUES(GuildId),
+                            QueueName = VALUES(QueueName),
+                            QueueType = VALUES(QueueType),
+                            QueueId = VALUES(QueueId),
+                            QueueMin = VALUES(QueueMin),
+                            QueueMax = VALUES(QueueMax),
+                            IsGlobal = VALUES(IsGlobal),
+                            GlobalID = VALUES(GlobalID)
+
+                        """
+                        # Log queue data for debugging
+                        standard_logger.info(f"Inserting/updating queue: GuildId={guild.discGuild.id}, QueueName={queue.QueueName}, QueueId={queue.QueueIndex}, QueueType={queue.QueueType}, QueueMax={queue.MaxSize}, QueueMin={queue.MinSize}, IsGlobal={queue.IsGlobal}, GlobalID={queue.GlobalId}")
+                        
+                        # Values to be inserted or updated
+                        queueValues = (guild.discGuild.id, queue.QueueName, queue.QueueIndex, queue.QueueType, queue.MinSize, queue.MaxSize, queue.IsGlobal, queue.GlobalId)
+                        
+                        # Execute the queue query
+                        cursor.execute(queueInsertOrUpdateQuery, queueValues)
+
+            # Commit the transaction
+            conn.commit()
+            standard_logger.info("Transaction committed successfully.")
+        else:
+            standard_logger.error("No connection to the database.")
+    except mariadb.Error as e:
+        standard_logger.error(f"Error executing query: {e}")
+        if conn:
+            conn.rollback()  # Rollback the transaction on error
+            standard_logger.error("Transaction rolled back.")
+    finally:
+        if conn:
+            conn.close()
+            standard_logger.warning("Database connection closed.")
 
 async def getList():
     conn = getConn()
 
     if conn:
         cursor = conn.cursor(dictionary=True)  # Use dictionary cursor for easier row access
-        guildList = []
+        guildDict = {}
 
         try:
             # Retrieve guild information
-            guildStatement = "SELECT GuildId, OwnerId, IsSetup FROM Guild"
+            guildStatement = "SELECT GuildId, OwnerId FROM Guild"
             cursor.execute(guildStatement)
             guilds = cursor.fetchall()
 
             # Retrieve queues and group them by GuildId
-            queueStatement = "SELECT GuildId, QueueId, QueueName, QueueType FROM queues"
+            queueStatement = "SELECT GuildId, QueueId, QueueName, QueueType, QueueMin, QueueMax, IsGlobal, GlobalID FROM queues"
             cursor.execute(queueStatement)
             queues = cursor.fetchall()
 
@@ -132,12 +205,12 @@ async def getList():
             for guild_data in guilds:
                 guild_id = guild_data['GuildId']
                 guild_data['queues'] = queueMap.get(guild_id, [])  # Add queues to the guild
-                guildList.append(guild_data)
+                guildDict[guild_id] = guild_data
 
         except Exception as e:
-            print(f"Error retrieving entry from database: {e}")
+            error_logger.error(f"Error retrieving entry from database: {e}")
         finally:
             cursor.close()
             conn.close()
 
-        return guildList
+        return guildDict
