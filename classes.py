@@ -1,6 +1,5 @@
 import discord
 from discord.ext.commands import Context
-from collections import deque
 import datetime
 import settings
 

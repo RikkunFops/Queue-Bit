@@ -1,5 +1,4 @@
 import os
-
 import settings
 import discord
 from discord import *
@@ -8,9 +7,8 @@ from discord import app_commands
 import time 
 from dotenv import load_dotenv
 from cogs.guild import GuildWrapper
-from cogs.guild import Guild
 from dbaccess import getList
-import atexit
+
 standard_logger = settings.logging.getLogger("discord")
 error_logger = settings.logging.getLogger("bot")
 

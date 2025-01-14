@@ -8,8 +8,6 @@ from discord import app_commands
 from classes import QbGuild, Queue, Client, Party
 import time
 from checks import *
-import datetime
-from unittest.mock import MagicMock, AsyncMock
 import settings
 import atexit
 from dbaccess import endProgram, saveProgram
@@ -152,13 +150,13 @@ class GuildWrapper(commands.Cog):
     async def addQueue(self, 
     ctx : commands.Context, *, 
     name: str = commands.parameter(description="Name of your queue."), 
-    queue_type: str = commands.parameter(description="What are we queueing for?"), 
+    activity: str = commands.parameter(description="What are we queueing for?"), 
     lobbysize : int = commands.parameter(description="Minimum lobby size")):
         Successful = None
         queuebitGuild = GuildList[ctx.guild.id]
         try:
             newIdentifier = len(queuebitGuild.GuildQueues)
-            newQueue = Queue(guild=queuebitGuild, name=name, type=queue_type, identifier=newIdentifier, min=lobbysize, max=lobbysize, globalQueue=False)
+            newQueue = Queue(guild=queuebitGuild, name=name, type=activity, identifier=newIdentifier, min=lobbysize, max=lobbysize, globalQueue=False)
             queuebitGuild.GuildQueues.append(newQueue)
             Successful = True
         except Exception as e:
@@ -519,11 +517,13 @@ class GuildWrapper(commands.Cog):
             name="registerqueue", 
             brief="Register a queue", 
             description="Register a queue as global.")
+    @commands.has_permissions(administrator=True)
     async def registerQueue(self, ctx, queuename):
         guildtoUse : QbGuild = GuildList[ctx.guild.id]
         for queue in guildtoUse.GuildQueues:
             if queue.QueueName == queuename:
                 queue.GlobalId = self.genGlobalId(queue)
+                print(queue.GlobalId)
                 GlobalQueues[queue.GlobalId] = queue
                 await ctx.send(f"Registered {queuename} as global queue!", ephemeral=True)
                 standard_logger.info(f"Queue '{queuename}' registered as global queue by '{ctx.author}' in guild '{ctx.guild.name}'")

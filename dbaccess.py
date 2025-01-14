@@ -2,7 +2,7 @@ import os
 from urllib.parse import urlparse
 import mariadb
 from dotenv import load_dotenv
-from cogs.guild import QbGuild
+
 import settings
 
 standard_logger = settings.logging.getLogger("discord")
