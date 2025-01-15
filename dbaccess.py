@@ -14,16 +14,13 @@ def get_conn():
     """Get a connection to the database."""
     load_dotenv()
     database_url = os.getenv('DATABASE_URL')
-
     if database_url:
         parsed_url = urlparse(database_url)
-
         user = parsed_url.username
         password = parsed_url.password
         host = parsed_url.hostname
         port = int(parsed_url.port)
         schema = parsed_url.path.lstrip("/")
-
         try:
             conn = mariadb.connect(
                 user=user,
@@ -34,19 +31,17 @@ def get_conn():
             )
             standard_logger.info("Connection successful!")
             return conn
-
         except mariadb.Error as e:
             error_logger.error("Error connecting to the database: %s", e)
-
     else:
         error_logger.error("DATABASE_URL is not set in the environment.")
+    return None
 
 def delete_queue(guild_id, queue_id):
     """Delete a queue from the database."""
     if not guild_id:
         error_logger.error("Invalid input: guild_id or queue_id is missing.")
         return
-    
     try:
         with get_conn() as conn:
             with conn.cursor() as cursor:
@@ -63,8 +58,6 @@ def delete_queue(guild_id, queue_id):
     except Exception as e:
         error_logger.error("Unexpected error: %s", e)
         raise
-
-
 
 def save_program(guild_dict):
     """Save program data to the database."""
@@ -211,7 +204,7 @@ async def get_list():
                 guild_data['queues'] = queue_map.get(guild_id, [])
                 guild_dict[guild_id] = guild_data
 
-        except Exception as e:
+        except mariadb.Error as e:
             error_logger.error("Error retrieving entry from database: %s", e)
         finally:
             cursor.close()

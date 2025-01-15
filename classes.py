@@ -23,7 +23,7 @@ class QbGuild:
 
 class Queue:
     """ Queue object to store queue information """
-    def __init__(self, guild, name, queue_type, identifier, min_size, max_size, global_queue):
+    def __init__(self, guild, name, queue_type, identifier, min_size, max_size, global_queue, **kwargs):
         """ Initialize the queue object """
         self.guild: QbGuild = guild
         self.queue_name = name
@@ -39,6 +39,9 @@ class Queue:
         ]
         self.is_active = False
         self.no_people_in_queue = 0
+
+        if kwargs['global_id'] is not None:
+            self.global_id = kwargs['global_id']
 
     def info(self):
         """ Return a string with the queue information """
@@ -62,21 +65,21 @@ class Queue:
 
     async def try_queue(self):
         """ Attempt to form a lobby from the queue """
-        standard_logger.info(f"Trying to queue {self.queue_name}")
+        standard_logger.info("Attempting to form a lobby for queue: %s", self.queue_name)
         current_lobby = []
         if len(self.people_in_queue) >= self.min_size:
-            standard_logger.info(f"Enough people in queue to form a lobby for {self.queue_name}")
+            standard_logger.info("Enough people in queue to form a lobby for %s", self.queue_name)
 
             for _ in range(self.min_size):
                 client = self.people_in_queue.pop(0)
                 current_lobby.append(client)
-                standard_logger.info(f"Added {client.user.name} to the lobby for {self.queue_name}")
+                standard_logger.info("Added %s to the lobby for %s", client.user.name, self.queue_name)
 
             if len(current_lobby) > 0:
                 await self.gather_lobby(current_lobby)
-                standard_logger.info(f"Gathered lobby for {self.queue_name}")
+                standard_logger.info("Gathered lobby for %s", self.queue_name)
         else:
-            log = f"Not enough people in queue to form a lobby for {self.queue_name}"
+            log = "Not enough people in queue to form a lobby for " + self.queue_name
             standard_logger.info(log)
 
     async def gather_lobby(self, lobby):
@@ -88,15 +91,15 @@ class Queue:
                 gather_msg += f"\n<@{client.user.id}>"
             except AttributeError:
                 pass
-            log = f"Client {client.user.name} gathered in "
-            log += f"{(datetime.datetime.now() - client.time_joined).total_seconds()} seconds"
+            log = "Client " + client.user.name + " gathered in "
+            log += str((datetime.datetime.now() - client.time_joined).total_seconds()) + " seconds"
             standard_logger.info(log)
             for client in lobby:
                 try:
                     await client.ctx.send(gather_msg, ephemeral=True)
                 except AttributeError:
                     pass
-        log = f"Group gathered in {(datetime.datetime.now() - start_gather).total_seconds()} seconds"
+        log = "Group gathered in " + str((datetime.datetime.now() - start_gather).total_seconds()) + " seconds"
         standard_logger.info(log)
 
 
@@ -128,11 +131,11 @@ class Party(Client):
 
     async def add_member(self, member: Client):
         """ Add a member to the party """
-        standard_logger.info(f"Adding {member.user.name} to party {self.party_name}")
+        standard_logger.info("Adding %s to party %s", member.user, self.party_name)
         self.size += 1
         await self.ctx.send(f"New member joined your party! <@{member.user.id}>", ephemeral=True)
-        for member in self.members:
-            await member.ctx.send(f"New member joined your party! <@{member.user.id}>", ephemeral=True)
+        for pMember in self.members:
+            await pMember.ctx.send(f"New member joined your party! <@{pMember.user.id}>", ephemeral=True)
         self.members.append(member)
 
     async def remove_member(self, user: Client):
@@ -142,7 +145,7 @@ class Party(Client):
             if member.user.id == user.user.id:
                 client_to_remove = member
                 break
-        standard_logger.info(f"Removing {user.user.name} from party {self.party_name}")
+        standard_logger.info("Removing %s from party %s", user.user.name, self.party_name)
         self.size -= 1
         self.members.remove(client_to_remove)
         await self.ctx.send(f"<@{user.user.id}> has left the party.", ephemeral=True)
@@ -151,9 +154,9 @@ class Party(Client):
 
     async def disband(self):
         """ Disband the party """
-        standard_logger.info(f"Disbanding party {self.party_name}")
+        standard_logger.info("Disbanding party %s", self.party_name)
         for member in self.members:
             await member.ctx.send(f"Your party has been disbanded! @{member.user.name}", ephemeral=True)
-            standard_logger.info(f"Notified {member.user.name} about disbanding {self.party_name}")
+            standard_logger.info("Notified %s about disbanding %s", member.user.name, self.party_name)
         self.qb_guild.guild_parties.pop(self.party_name)
-        standard_logger.info(f"Party {self.party_name} removed from guild parties")
+        standard_logger.info("Party %s removed from guild parties", self.party_name)
