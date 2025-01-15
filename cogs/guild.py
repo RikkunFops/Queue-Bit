@@ -1,18 +1,20 @@
 import os
 import threading
+import time
+import atexit
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from classes import QbGuild, Queue, Client, Party
-import time
+
 import settings
-import atexit
+from classes import QbGuild, Queue, Client, Party
 from dbaccess import end_program, save_program, delete_queue
 
 standard_logger = settings.logging.getLogger("discord")
 error_logger = settings.logging.getLogger("bot")
 
-global GuildList
+
 GuildList : QbGuild = {}
 GlobalQueues : Queue = {}
 
@@ -40,11 +42,11 @@ class GuildWrapper(commands.Cog):
             if discord_guild:
                 # Create a Guild instance
                 guild_instance = QbGuild(discord_guild, self.bot)
-                standard_logger.info(f"Loading {guild_instance.disc_guild.name}")
+                standard_logger.info("Loading %s", guild_instance.disc_guild.name)
 
                 # Add queues to the Guild instance if available
                 if 'queues' in guild_data:
-                    standard_logger.info(f"Listing queues in {guild_instance.disc_guild.id}")
+                    standard_logger.info("Listing queues in %s", guild_instance.disc_guild.id)
                     standard_logger.info(" Queue name | Queue type | Queue ID")
                     for queue_data in guild_data['queues']:
                         queue_id = queue_data['QueueId']
@@ -58,11 +60,11 @@ class GuildWrapper(commands.Cog):
 
                         if bool_glob:
                             new_queue = Queue(guild=discord_guild, name=queue_name, queue_type=queue_type, identifier=queue_id, min_size=queue_min, max_size=queue_max, global_queue=True)
-                            standard_logger.info(f"{new_queue.queue_name:^12}|{new_queue.queue_type:^12}|{new_queue.queue_index:^12}")
+                            standard_logger.info("%s | %s | %s", new_queue.queue_name, new_queue.queue_type, new_queue.queue_index)
                             guild_instance.guild_queues.append(new_queue)
                         else:
                             new_queue = Queue(guild=discord_guild, name=queue_name, queue_type=queue_type, identifier=queue_id, min_size=queue_min, max_size=queue_max, global_queue=False)
-                            standard_logger.info(f"{new_queue.queue_name:^12}|{new_queue.queue_type:^12}|{new_queue.queue_index:^12}")
+                            standard_logger.info("%s | %s | %s", new_queue.queue_name, new_queue.queue_type, new_queue.queue_index)
                             guild_instance.guild_queues.append(new_queue)
 
                 # Add the guild instance to the GuildList
@@ -78,7 +80,7 @@ class GuildWrapper(commands.Cog):
                 return
         new_guild = QbGuild(new_guild, self.bot)
         GuildList[new_guild.disc_guild.id] = new_guild
-        standard_logger.info(f"Added new guild: {GuildList[new_guild.disc_guild.id]}")
+        standard_logger.info("Added new guild: %s", GuildList[new_guild.disc_guild.id])
 
     def check_user_queues(self, client: Client):
         """ Check if a user is in a queue """
@@ -136,7 +138,7 @@ class GuildWrapper(commands.Cog):
             successful = True
         except Exception as e:
             successful = False
-            error_logger.error(f"Error {e}")
+            error_logger.error(f"Error %s", e)
         finally:
             if successful:
                 await ctx.send(f"Successfully added list {queuebit_guild.guild_queues[-1].queue_name}", ephemeral=True)
@@ -167,12 +169,12 @@ class GuildWrapper(commands.Cog):
                 break
         if not queue_to_join:
             await ctx.send("Couldn't join the queue! Are you sure this queue exists?", ephemeral=True)
-            error_logger.error(f"Queue '{name}' does not exist in guild '{ctx.guild.name}'")
+            error_logger.error("Queue '%s' does not exist in guild '%s'", name, ctx.guild.name)
             return
 
         if self.check_user_queues(new_client):
             await ctx.send("You're already queuing! Leave the current queue before requeuing with /leavequeue.", ephemeral=True)
-            error_logger.warning(f"User '{ctx.author}' is already in a queue in guild '{ctx.guild.name}'")
+            error_logger.warning("User '%s' is already in a queue in guild '%s'", ctx.author, ctx.guild.name)
             return
         else:
             queue_to_join.people_in_queue.append(new_client)
@@ -184,10 +186,10 @@ class GuildWrapper(commands.Cog):
 
             if queue_to_join.no_people_in_queue != queue_to_join.max_size * 5:
                 await ctx.send(f"You've joined {queue_to_join.queue_name}! \nThere aren't many people, though. \nThis may take a moment! {queue_to_join.no_people_in_queue}", ephemeral=True)
-                standard_logger.info(f"User '{ctx.author}' joined queue '{queue_to_join.queue_name}' in guild '{ctx.guild.name}' with {queue_to_join.no_people_in_queue} people in queue")
+                standard_logger.info("User '%s' joined queue '%s' in guild '%s' with %d people in queue", ctx.author, queue_to_join.queue_name, ctx.guild.name, queue_to_join.no_people_in_queue)
             else:
                 await ctx.send(f"You've joined {queue_to_join.queue_name}! Shouldn't take long. {queue_to_join.no_people_in_queue}", ephemeral=True)
-                standard_logger.info(f"User '{ctx.author}' joined queue '{queue_to_join.queue_name}' in guild '{ctx.guild.name}' with {queue_to_join.no_people_in_queue} people in queue")
+                standard_logger.info("User '%s' joined queue '%s' in guild '%s' with %d people in queue", ctx.author, queue_to_join.queue_name, ctx.guild.name, queue_to_join.no_people_in_queue)
             await queue_to_join.try_queue()
 
     @join_queue.autocomplete('name')
@@ -216,30 +218,30 @@ class GuildWrapper(commands.Cog):
                     if ctx.author == users.user:
                         await queues.remove_from_list(users)
                         queues.no_people_in_queue -= 1
-                        standard_logger.info(f"User '{ctx.author}' left queue '{queues.queue_name}' in guild '{ctx.guild.name}'")
+                        standard_logger.info("User '%s' left queue '%s' in guild '%s'", ctx.author, queues.queue_name, ctx.guild.name)
                         await ctx.send(f"You have left the queue: {queues.queue_name}.", ephemeral=True)
                         return
             
             await ctx.send(f"You aren't in a queue!", ephemeral=True)
-            error_logger.warning(f"User '{ctx.author}' attempted to leave a queue in guild '{ctx.guild.name}' but is not in any queue")
+            error_logger.warning("User '%s' attempted to leave a queue in guild '%s' but is not in any queue", ctx.author, ctx.guild.name)
         else:
             clientToLeave = results[2]
             if results[1]:
                 queueToLeave = clientToLeave.active_queue
                 if not queueToLeave:
                     await ctx.send("You're not in a queue!", ephemeral=True)
-                    error_logger.warning(f"User '{ctx.author}' attempted to leave a queue in guild '{ctx.guild.name}' but is not in any queue")
+                    error_logger.warning("User '%s' attempted to leave a queue in guild '%s' but is not in any queue", ctx.author, ctx.guild.name)
                     return
                 await queueToLeave.remove_from_list(clientToLeave)
                 queueToLeave.no_people_in_queue -= (len(clientToLeave.members)+1)
-                standard_logger.info(f"Party '{clientToLeave.party_name}' left queue '{queueToLeave.queue_name}' in guild '{ctx.guild.name}'")
+                standard_logger.info("Party '%s' left queue '%s' in guild '%s'", clientToLeave.party_name, queueToLeave.queue_name, ctx.guild.name)
                 await ctx.send(f"Your party has left the queue: {queueToLeave.queue_name}.", ephemeral=True)
                 return
             else:
                 queueToLeave = clientToLeave.active_queue
                 if queueToLeave:
                     await ctx.send("Only a party leader can leave the queue!", ephemeral=True)
-                    error_logger.warning(f"User '{ctx.author}' attempted to leave queue '{queueToLeave.queue_name}' in guild '{ctx.guild.name}' but is not the party leader")
+                    error_logger.warning("User '%s' attempted to leave queue '%s' in guild '%s' but is not the party leader", ctx.author, queueToLeave.queue_name, ctx.guild.name)
                 else:
                     await ctx.send("You're not in a queue! Plus, only the party leader can leave queues!", ephemeral=True)
                     error_logger.warning(f"User '{ctx.author}' attempted to leave queue but party is not in a queue in guild '{ctx.guild.name}'")
@@ -274,17 +276,16 @@ class GuildWrapper(commands.Cog):
                 f"{len(queue.people_in_queue):<{col_widths[3]}}"
             ])
             list_guild_queues += '\n' + row
-
-        try:
-            if list_guild_queues.strip():
-                await ctx.send(f"```{list_guild_queues}```", ephemeral=True)
-                standard_logger.info(f"Listed queues for guild '{ctx.guild.name}'")
-            else:
-                await ctx.send("There are no queues! Create one with /addqueue", ephemeral=True)
-                standard_logger.info(f"No queues found for guild '{ctx.guild.name}'")
-        except Exception as e:
-            await ctx.send("Undefined error!")
-            error_logger.error(f"Error listing queues for guild '{ctx.guild.name}': {e}")
+            try:
+                if list_guild_queues.strip():
+                    await ctx.send(f"```{list_guild_queues}```", ephemeral=True)
+                    standard_logger.info("Listed queues for guild '%s'", ctx.guild.name)
+                else:
+                    await ctx.send("There are no queues! Create one with /addqueue", ephemeral=True)
+                    standard_logger.info("No queues found for guild '%s'", ctx.guild.name)
+            except Exception as e:
+                await ctx.send("Undefined error!")
+                error_logger.error("Error listing queues for guild '%s': %s", ctx.guild.name, e)
 
     @commands.hybrid_command(
         name="removequeue",
@@ -298,13 +299,13 @@ class GuildWrapper(commands.Cog):
             if queue.queue_name == name:
                 guild_to_remove.guild_queues.remove(queue)
                 
-                standard_logger.info(f"Queue '{name}' removed by '{ctx.author}' in guild '{ctx.guild.name}'")
+                standard_logger.info("Queue '%s' removed by '%s' in guild '%s'", name, ctx.author, ctx.guild.name)
                 print(queue.queue_index)
                 delete_queue(ctx.guild.id, queue.queue_index)
                 await ctx.send(f"Queue {name} removed!", ephemeral=True)
                 return
         await ctx.send("Couldn't find queue!", ephemeral=True)
-        error_logger.warning(f"Queue '{name}' not found in guild '{ctx.guild.name}'")
+        error_logger.warning("Queue '%s' not found in guild '%s'", name, ctx.guild.name)
     @remove_queue.autocomplete('name')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """ Autocomplete the queue name """
@@ -331,11 +332,11 @@ class GuildWrapper(commands.Cog):
             if queue.queue_name == queuename:
                 queue.min_size = size
                 await ctx.send("Successfully updated!", ephemeral=True)
-                standard_logger.info(f"Queue '{queuename}' lobby size updated to {size} by '{ctx.author}' in guild '{ctx.guild.name}'")
+                standard_logger.info("Queue '%s' lobby size updated to %d by '%s' in guild '%s'", queuename, size, ctx.author, ctx.guild.name)
                 return
 
         await ctx.send("Couldn't update minmax! Please contact support for help.", ephemeral=True)
-        error_logger.error(f"Failed to update lobby size for queue '{queuename}' in guild '{ctx.guild.name}'")
+        error_logger.error("Failed to update lobby size for queue '%s' in guild '%s'", queuename, ctx.guild.name)
 
     @changelobbysize.autocomplete('queuename')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -360,21 +361,21 @@ class GuildWrapper(commands.Cog):
         result = self.check_user_parties(client_check)
         if result:
             await ctx.send(f"You're already in a party! \nPeople can join by using: `/joinparty {result[2].party_name}` \nOr you can leave by using: `/leaveparty`", ephemeral=True)
-            standard_logger.info(f"User '{ctx.author}' attempted to create a party but is already in party '{result[2].party_name}' in guild '{ctx.guild.name}'")
+            standard_logger.info("User '%s' attempted to create a party but is already in party '%s' in guild '%s'", ctx.author, result[2].party_name, ctx.guild.name)
             return
         new_party = Party(secret=partyname, user=ctx.author, qb_guild=guild_to_use, ctx=ctx)
         if partyname in guild_to_use.guild_parties:
             await ctx.send("Party already exists!", ephemeral=True)
-            error_logger.warning(f"User '{ctx.author}' attempted to create a party with an existing name '{partyname}' in guild '{ctx.guild.name}'")
+            error_logger.warning("User '%s' attempted to create a party with an existing name '%s' in guild '%s'", ctx.author, partyname, ctx.guild.name)
             return
 
         guild_to_use.guild_parties[partyname] = new_party
         if guild_to_use.guild_parties[partyname]:
             await ctx.send(f"Party `{partyname}` created!", ephemeral=True)
-            standard_logger.info(f"Party '{partyname}' created by user '{ctx.author}' in guild '{ctx.guild.name}'")
+            standard_logger.info("Party '%s' created by user '%s' in guild '%s'", partyname, ctx.author, ctx.guild.name)
         else:
             await ctx.send("Couldn't create party!", ephemeral=True)
-            error_logger.error(f"Failed to create party '{partyname}' by user '{ctx.author}' in guild '{ctx.guild.name}'")
+            error_logger.error("Failed to create party '%s' by user '%s' in guild '%s'", partyname, ctx.author, ctx.guild.name)
 
     @commands.hybrid_command(
         name="joinparty",
@@ -388,15 +389,15 @@ class GuildWrapper(commands.Cog):
             new_client = Client(user=ctx.author, ctx=ctx, guild=guild_to_use)
             if new_client.user == guild_to_use.guild_parties[partyname].user or any(new_client.user == member.user for member in guild_to_use.guild_parties[partyname].members):
                 await ctx.send("You're already in the party!", ephemeral=True)
-                standard_logger.info(f"User '{ctx.author}' attempted to join party '{partyname}' but is already a member in guild: '{ctx.guild.name}'")
+                standard_logger.info("User '%s' attempted to join party '%s' but is already a member in guild: '%s'", ctx.author, partyname, ctx.guild.name)
                 return
 
             await guild_to_use.guild_parties[partyname].add_member(new_client)
             await ctx.send(f"Joined party: {partyname}!", ephemeral=True)
-            standard_logger.info(f"User '{ctx.author}' joined party '{partyname}' in guild: '{ctx.guild.name}'")
+            standard_logger.info("User '%s' joined party '%s' in guild: '%s'", ctx.author, partyname, ctx.guild.name)
         else:
             await ctx.send("Couldn't join party! Does it exist?", ephemeral=True)
-            error_logger.warning(f"User '{ctx.author}' attempted to join non-existent party '{partyname}' in guild: '{ctx.guild.name}'")
+            error_logger.warning("User '%s' attempted to join non-existent party '%s' in guild: '%s'", ctx.author, partyname, ctx.guild.name)
 
     @commands.hybrid_command(
         name="leaveparty",
@@ -408,17 +409,17 @@ class GuildWrapper(commands.Cog):
         party_to_leave = self.check_user_parties(Client(user=ctx.author, ctx=ctx, guild=GuildList[ctx.guild.id]))
         if not party_to_leave:
             await ctx.send("You're not in a party!", ephemeral=True)
-            standard_logger.info(f"User '{ctx.author}' attempted to leave a party but is not in a party in guild '{ctx.guild.name}'")
+            standard_logger.info("User '%s' attempted to leave a party but is not in a party in guild '%s'", ctx.author, ctx.guild.name)
             return
         if party_to_leave[1]:
             await party_to_leave[2].disband()
             await ctx.send("The party disbanded!", ephemeral=True)
-            standard_logger.info(f"User '{ctx.author}' disbanded party '{party_to_leave[2].party_name}' in guild '{ctx.guild.name}'")
+            standard_logger.info("User '%s' disbanded party '%s' in guild '%s'", ctx.author, party_to_leave[2].party_name, ctx.guild.name)
         else:
             new_client = Client(user=ctx.author, ctx=ctx, guild=GuildList[ctx.guild.id])
             await party_to_leave[2].remove_member(new_client)
             await ctx.send("You've left the party!", ephemeral=True)
-            standard_logger.info(f"User '{ctx.author}' left party '{party_to_leave[2].party_name}' in guild '{ctx.guild.name}'")
+            standard_logger.info("User '%s' left party '%s' in guild '%s'", ctx.author, party_to_leave[2].party_name, ctx.guild.name)
 
     @commands.hybrid_command(
         name="partyinfo",
@@ -430,7 +431,7 @@ class GuildWrapper(commands.Cog):
         party_to_check = self.check_user_parties(Client(user=ctx.author, ctx=ctx, guild=GuildList[ctx.guild.id]))
         if not party_to_check:
             await ctx.send("You're not in a party!", ephemeral=True)
-            standard_logger.info(f"User '{ctx.author}' attempted to get party info but is not in a party in guild '{ctx.guild.name}'")
+            standard_logger.info("User '%s' attempted to get party info but is not in a party in guild '%s'", ctx.author, ctx.guild.name)
             return
         party = party_to_check[2]
         party_members = '```'
@@ -450,14 +451,14 @@ class GuildWrapper(commands.Cog):
 
         for member in party.members:
             row = ''.join([
-                f"  ",
-                f"| {member.user.name:^{col_widths[1]}}"
+            f"  ",
+            f"| {member.user.name:^{col_widths[1]}}"
             ])
             party_members += '\n' + row
         party_members += '```'
 
         await ctx.send(party_members, ephemeral=True)
-        standard_logger.info(f"User '{ctx.author}' requested party info for party '{party.party_name}' in guild '{ctx.guild.name}'")
+        standard_logger.info("User '%s' requested party info for party '%s' in guild '%s'", ctx.author, party.party_name, ctx.guild.name)
 
     @commands.hybrid_command(
         name="queueinfo",
@@ -470,10 +471,10 @@ class GuildWrapper(commands.Cog):
         for queue in guild_to_use.guild_queues:
             if queue.queue_name == queuename:
                 await ctx.send(queue.info(), ephemeral=True)
-                standard_logger.info(f"Queue info for '{queuename}' requested by '{ctx.author}' in guild '{ctx.guild.name}'")
+                standard_logger.info("Queue info for '%s' requested by '%s' in guild '%s'", queuename, ctx.author, ctx.guild.name)
                 return
         await ctx.send("Couldn't find queue!", ephemeral=True)
-        error_logger.warning(f"Queue '{queuename}' not found in guild '{ctx.guild.name}' requested by '{ctx.author}'")
+        error_logger.warning("Queue '%s' not found in guild '%s' requested by '%s'", queuename, ctx.guild.name, ctx.author)
 
     @queueinfo.autocomplete('queuename')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -500,10 +501,10 @@ class GuildWrapper(commands.Cog):
                 queue.global_id = self.gen_global_id(queue)
                 GlobalQueues[queue.global_id] = queue
                 await ctx.send(f"Registered {queuename} as global queue!", ephemeral=True)
-                standard_logger.info(f"Queue '{queuename}' registered as global queue by '{ctx.author}' in guild '{ctx.guild.name}'")
+                standard_logger.info("Queue '%s' registered as global queue by '%s' in guild '%s'", queuename, ctx.author, ctx.guild.name)
                 return
         await ctx.send("Couldn't find queue!", ephemeral=True)
-        error_logger.warning(f"Queue '{queuename}' not found in guild '{ctx.guild.name}' requested by '{ctx.author}'")
+        error_logger.warning("Queue '%s' not found in guild '%s' requested by '%s'", queuename, ctx.guild.name, ctx.author)
 
     @registerqueue.autocomplete('queuename')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:

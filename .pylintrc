@@ -443,6 +443,10 @@ disable=raw-checker-failed,
         C0114,
         C0411,
         C0301,
+        R0903,
+        R0902,
+        R0913,
+        R0917,
         
         
 
