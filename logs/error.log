@@ -1,5 +1,0 @@
-WARNING    - 2025-01-14 17:04:47,825 - dbaccess       : No rows deleted. GuildId: 1282046845224353822, QueueId: 0
-WARNING    - 2025-01-14 17:05:13,466 - guild          : Queue '000' not found in guild 'Rikkun's server'
-INFO       - 2025-01-14 17:13:10,621 - dbaccess       : Inserting/updating guild: 1282046845224353822, 352491139863150593
-INFO       - 2025-01-14 17:13:10,623 - dbaccess       : Transaction committed successfully.
-WARNING    - 2025-01-14 17:13:10,623 - dbaccess       : Database connection closed.
