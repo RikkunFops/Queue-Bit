@@ -20,6 +20,9 @@ jobs:
         pip install pylint
         pip install discord
         pip install python-dotenv
+        apt install libmariadb3 libmariadb-dev
+        pip install mariadb
+        
     - name: Analysing the code with pylint
       run: |
         pylint $(git ls-files '*.py')
