@@ -246,7 +246,7 @@ class GuildWrapper(commands.Cog):
                 error_logger.warning("User '%s' attempted to leave queue '%s' in guild '%s' but is not the party leader", ctx.author, queueToLeave.queue_name, ctx.guild.name)
             else:
                 await ctx.send("You're not in a queue! Plus, only the party leader can leave queues!", ephemeral=True)
-                error_logger.warning(f"User '{ctx.author}' attempted to leave queue but party is not in a queue in guild '{ctx.guild.name}'")
+                error_logger.warning("User '%s' attempted to leave queue but party is not in a queue in guild '%s'", ctx.author, ctx.guild.name)
 
     @commands.hybrid_command(
         name="listqueues",
