@@ -23,7 +23,7 @@ class QbGuild:
 
 class Queue:
     """ Queue object to store queue information """
-    def __init__(self, guild, name, queue_type, identifier, min_size, max_size, global_queue):
+    def __init__(self, guild, name, queue_type, identifier, min_size, max_size, global_queue, kwargs):
         """ Initialize the queue object """
         self.guild: QbGuild = guild
         self.queue_name = name
@@ -39,6 +39,9 @@ class Queue:
         ]
         self.is_active = False
         self.no_people_in_queue = 0
+
+        if kwargs['global_id'] is not None:
+            self.global_id = kwargs['global_id']
 
     def info(self):
         """ Return a string with the queue information """

@@ -1,4 +1,3 @@
-import os
 import threading
 import time
 import atexit
@@ -17,7 +16,7 @@ error_logger = settings.logging.getLogger("bot")
 
 GuildList : QbGuild = {}
 GlobalQueues : Queue = {}
-
+# pylint: disable=too-many-public-methods
 def save_guilds():
     """ Save the guilds to the database """
     while True:
@@ -35,6 +34,7 @@ class GuildWrapper(commands.Cog):
         self.save_thread = None
 
     def load_guilds(self, load_dict):
+        # pylint: disable=too-many-locals
         """ Load the guilds from the database """
         for guild_id, guild_data in load_dict.items():
             discord_guild: QbGuild = self.bot.get_guild(guild_id)
@@ -59,7 +59,7 @@ class GuildWrapper(commands.Cog):
                         global_id = queue_data['GlobalID']
 
                         if bool_glob:
-                            new_queue = Queue(guild=discord_guild, name=queue_name, queue_type=queue_type, identifier=queue_id, min_size=queue_min, max_size=queue_max, global_queue=True)
+                            new_queue = Queue(guild=discord_guild, name=queue_name, queue_type=queue_type, identifier=queue_id, min_size=queue_min, max_size=queue_max, global_queue=True, global_id=global_id)
                             standard_logger.info("%s | %s | %s", new_queue.queue_name, new_queue.queue_type, new_queue.queue_index)
                             guild_instance.guild_queues.append(new_queue)
                         else:
@@ -136,9 +136,12 @@ class GuildWrapper(commands.Cog):
             new_queue = Queue(guild=queuebit_guild, name=name, queue_type=activity, identifier=new_identifier, min_size=lobbysize, max_size=lobbysize, global_queue=False)
             queuebit_guild.guild_queues.append(new_queue)
             successful = True
-        except Exception as e:
+        except ValueError as ve:
             successful = False
-            error_logger.error(f"Error %s", e)
+            error_logger.error("ValueError: %s", ve)
+        except TypeError as te:
+            successful = False
+            error_logger.error("TypeError: %s", te)
         finally:
             if successful:
                 await ctx.send(f"Successfully added list {queuebit_guild.guild_queues[-1].queue_name}", ephemeral=True)
@@ -149,6 +152,7 @@ class GuildWrapper(commands.Cog):
         brief="Join a queue"
     )
     async def join_queue(self, ctx: commands.Context, name: str = commands.parameter(description="Which queue?")):
+        # pylint: disable=too-many-branches
         """ Join a queue """
         guild_to_list: QbGuild = GuildList[ctx.guild.id]
         queue_to_join: Queue = None
@@ -157,11 +161,11 @@ class GuildWrapper(commands.Cog):
         new_client = None
         if not party_status:
             new_client = Client(user=ctx.author, queue=queue_to_join, ctx=ctx, guild=guild_to_list)
-        elif party_status[0]:
+        if party_status[0]:
             if not party_status[1]:
                 await ctx.send("Only a party leader can join the queue!", ephemeral=True)
                 return
-            elif party_status[1]:
+            if party_status[1]:
                 new_client = party_status[2]
         for queue in guild_to_list.guild_queues:
             if queue.queue_name.lower() == name.lower():
@@ -176,24 +180,23 @@ class GuildWrapper(commands.Cog):
             await ctx.send("You're already queuing! Leave the current queue before requeuing with /leavequeue.", ephemeral=True)
             error_logger.warning("User '%s' is already in a queue in guild '%s'", ctx.author, ctx.guild.name)
             return
-        else:
-            queue_to_join.people_in_queue.append(new_client)
-            if isinstance(new_client, Party):
-                new_client.active_queue = queue_to_join
-                queue_to_join.no_people_in_queue += new_client.size
-            elif isinstance(new_client, Client):
-                queue_to_join.no_people_in_queue += 1
+        queue_to_join.people_in_queue.append(new_client)
+        if isinstance(new_client, Party):
+            new_client.active_queue = queue_to_join
+            queue_to_join.no_people_in_queue += new_client.size
+        elif isinstance(new_client, Client):
+            queue_to_join.no_people_in_queue += 1
 
-            if queue_to_join.no_people_in_queue != queue_to_join.max_size * 5:
-                await ctx.send(f"You've joined {queue_to_join.queue_name}! \nThere aren't many people, though. \nThis may take a moment! {queue_to_join.no_people_in_queue}", ephemeral=True)
-                standard_logger.info("User '%s' joined queue '%s' in guild '%s' with %d people in queue", ctx.author, queue_to_join.queue_name, ctx.guild.name, queue_to_join.no_people_in_queue)
-            else:
-                await ctx.send(f"You've joined {queue_to_join.queue_name}! Shouldn't take long. {queue_to_join.no_people_in_queue}", ephemeral=True)
-                standard_logger.info("User '%s' joined queue '%s' in guild '%s' with %d people in queue", ctx.author, queue_to_join.queue_name, ctx.guild.name, queue_to_join.no_people_in_queue)
-            await queue_to_join.try_queue()
+        if queue_to_join.no_people_in_queue != queue_to_join.max_size * 5:
+            await ctx.send(f"You've joined {queue_to_join.queue_name}! \nThere aren't many people, though. \nThis may take a moment! {queue_to_join.no_people_in_queue}", ephemeral=True)
+            standard_logger.info("User '%s' joined queue '%s' in guild '%s' with %d people in queue", ctx.author, queue_to_join.queue_name, ctx.guild.name, queue_to_join.no_people_in_queue)
+        else:
+            await ctx.send(f"You've joined {queue_to_join.queue_name}! Shouldn't take long. {queue_to_join.no_people_in_queue}", ephemeral=True)
+            standard_logger.info("User '%s' joined queue '%s' in guild '%s' with %d people in queue", ctx.author, queue_to_join.queue_name, ctx.guild.name, queue_to_join.no_people_in_queue)
+        await queue_to_join.try_queue()
 
     @join_queue.autocomplete('name')
-    async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def joinqueue_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
@@ -206,7 +209,7 @@ class GuildWrapper(commands.Cog):
             brief="Leave a queue",
             description="Leave the current queue you are waiting in."
     )
-    async def leaveQueue(self, 
+    async def leaveQueue(self,
                          ctx : commands.Context):
         """ Leave a queue """
         guildToUse : QbGuild = GuildList[ctx.guild.id]
@@ -221,8 +224,7 @@ class GuildWrapper(commands.Cog):
                         standard_logger.info("User '%s' left queue '%s' in guild '%s'", ctx.author, queues.queue_name, ctx.guild.name)
                         await ctx.send(f"You have left the queue: {queues.queue_name}.", ephemeral=True)
                         return
-            
-            await ctx.send(f"You aren't in a queue!", ephemeral=True)
+            await ctx.send("You aren't in a queue!", ephemeral=True)
             error_logger.warning("User '%s' attempted to leave a queue in guild '%s' but is not in any queue", ctx.author, ctx.guild.name)
         else:
             clientToLeave = results[2]
@@ -237,15 +239,15 @@ class GuildWrapper(commands.Cog):
                 standard_logger.info("Party '%s' left queue '%s' in guild '%s'", clientToLeave.party_name, queueToLeave.queue_name, ctx.guild.name)
                 await ctx.send(f"Your party has left the queue: {queueToLeave.queue_name}.", ephemeral=True)
                 return
+
+            queueToLeave = clientToLeave.active_queue
+            if queueToLeave:
+                await ctx.send("Only a party leader can leave the queue!", ephemeral=True)
+                error_logger.warning("User '%s' attempted to leave queue '%s' in guild '%s' but is not the party leader", ctx.author, queueToLeave.queue_name, ctx.guild.name)
             else:
-                queueToLeave = clientToLeave.active_queue
-                if queueToLeave:
-                    await ctx.send("Only a party leader can leave the queue!", ephemeral=True)
-                    error_logger.warning("User '%s' attempted to leave queue '%s' in guild '%s' but is not the party leader", ctx.author, queueToLeave.queue_name, ctx.guild.name)
-                else:
-                    await ctx.send("You're not in a queue! Plus, only the party leader can leave queues!", ephemeral=True)
-                    error_logger.warning(f"User '{ctx.author}' attempted to leave queue but party is not in a queue in guild '{ctx.guild.name}'")
-         
+                await ctx.send("You're not in a queue! Plus, only the party leader can leave queues!", ephemeral=True)
+                error_logger.warning(f"User '{ctx.author}' attempted to leave queue but party is not in a queue in guild '{ctx.guild.name}'")
+
     @commands.hybrid_command(
         name="listqueues",
         brief="List all queues",
@@ -255,18 +257,14 @@ class GuildWrapper(commands.Cog):
         """ List all queues for the server """
         list_guild_queues = ''
         guild_to_list: QbGuild = GuildList[ctx.guild.id]
-        
         # Define column headers and widths
         headers = ['Queue Name', 'Minimum size', 'Maximum size', 'No. people in Queue']
         col_widths = [15, 15, 15, 20]  # Adjust these widths based on expected data length
-
         # Create the header row
         header_row = ''.join(f"{header:<{col_width}}" for header, col_width in zip(headers, col_widths))
         list_guild_queues += header_row
-        
         # Add a separator row for better readability
         list_guild_queues += '\n' + '-' * sum(col_widths)
-        
         # Add each queue's data
         for queue in guild_to_list.guild_queues:
             row = ''.join([
@@ -283,7 +281,7 @@ class GuildWrapper(commands.Cog):
                 else:
                     await ctx.send("There are no queues! Create one with /addqueue", ephemeral=True)
                     standard_logger.info("No queues found for guild '%s'", ctx.guild.name)
-            except Exception as e:
+            except ValueError as e:
                 await ctx.send("Undefined error!")
                 error_logger.error("Error listing queues for guild '%s': %s", ctx.guild.name, e)
 
@@ -298,7 +296,6 @@ class GuildWrapper(commands.Cog):
         for queue in guild_to_remove.guild_queues:
             if queue.queue_name == name:
                 guild_to_remove.guild_queues.remove(queue)
-                
                 standard_logger.info("Queue '%s' removed by '%s' in guild '%s'", name, ctx.author, ctx.guild.name)
                 print(queue.queue_index)
                 delete_queue(ctx.guild.id, queue.queue_index)
@@ -307,7 +304,7 @@ class GuildWrapper(commands.Cog):
         await ctx.send("Couldn't find queue!", ephemeral=True)
         error_logger.warning("Queue '%s' not found in guild '%s'", name, ctx.guild.name)
     @remove_queue.autocomplete('name')
-    async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def remove_queue_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
@@ -339,7 +336,7 @@ class GuildWrapper(commands.Cog):
         error_logger.error("Failed to update lobby size for queue '%s' in guild '%s'", queuename, ctx.guild.name)
 
     @changelobbysize.autocomplete('queuename')
-    async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def changelobbysize_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
@@ -444,14 +441,14 @@ class GuildWrapper(commands.Cog):
         party_members += '\n' + '-' * sum(col_widths)
 
         f_row = ''.join([
-            f"* ",
+            "* ",
             f"|{party.user.name:^{col_widths[1]}}"
         ])
         party_members += '\n' + f_row
 
         for member in party.members:
             row = ''.join([
-            f"  ",
+            "  ",
             f"| {member.user.name:^{col_widths[1]}}"
             ])
             party_members += '\n' + row
@@ -477,7 +474,7 @@ class GuildWrapper(commands.Cog):
         error_logger.warning("Queue '%s' not found in guild '%s' requested by '%s'", queuename, ctx.guild.name, ctx.author)
 
     @queueinfo.autocomplete('queuename')
-    async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def queueinfo_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
@@ -507,7 +504,7 @@ class GuildWrapper(commands.Cog):
         error_logger.warning("Queue '%s' not found in guild '%s' requested by '%s'", queuename, ctx.guild.name, ctx.author)
 
     @registerqueue.autocomplete('queuename')
-    async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def registerqueue_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]

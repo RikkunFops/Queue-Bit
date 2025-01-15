@@ -24,22 +24,25 @@ guild_manager = GuildWrapper(disc_client)
 
 @disc_client.event
 async def on_ready():
+    # pylint: disable=W0718
+    """ When the bot is ready """
     try:
-        global guild_manager
         await disc_client.add_cog(GuildWrapper(disc_client))
-
         synced = await disc_client.tree.sync()
         standard_logger.info("Synced: %d commands", len(synced))
         load_dict = await get_list()
         guild_manager.load_guilds(load_dict)
         for guild in disc_client.guilds:
             guild_manager.new_guild(guild)
+    except discord.DiscordException as e:
+        error_logger.error("Discord exception occurred: %s", e)
     except Exception as e:
-        standard_logger.error("Failed to sync: %s", e)
+        error_logger.error("An unexpected error occurred: %s", e)
 
 
 @disc_client.event
 async def on_guild_join(guild: discord.Guild):
+    """ When the bot joins a guild """
     standard_logger.info("I joined a server! %s | %d", guild.name, guild.id)
     guild_manager.new_guild(guild)
     async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.bot_add):
@@ -62,6 +65,7 @@ async def on_guild_join(guild: discord.Guild):
     description="Get details on how to find bot support",
 )
 async def support(ctx):
+    """ Get support """
     await ctx.send(
         "You can get support from @RikkunDev in https://discord.gg/keAWNkTg. \nPlease remember to be patient and respectful.",
         ephemeral=True,
@@ -70,6 +74,7 @@ async def support(ctx):
 
 @disc_client.hybrid_command()
 async def ping(ctx: commands.Context):
+    """ Get the bot's latency """
     await ctx.send(f"Responded <t:{int(time.mktime(ctx.interaction.created_at.timetuple()))}:T> ago")
 
 

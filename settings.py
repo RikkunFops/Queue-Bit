@@ -3,13 +3,17 @@ import logging
 
 # Custom formatter to remove non-UTF-8 characters
 class UTF8SafeFormatter(logging.Formatter):
+    """ Custom formatter to remove non-UTF-8 characters """
     def format(self, record):
+        """ Format the log record """
         if record.msg:
             try:
                 # Remove non-UTF-8 characters from the message
                 record.msg = str(record.msg).encode("utf-8", errors="ignore").decode("utf-8")
-            except Exception:
-                record.msg = "Log message contained invalid characters and was sanitized."
+            except UnicodeEncodeError:
+                record.msg = "Log message contained invalid characters and was sanitized due to UnicodeEncodeError."
+            except UnicodeDecodeError:
+                record.msg = "Log message contained invalid characters and was sanitized due to UnicodeDecodeError."
         return super().format(record)
 
 # Updated logging configuration
