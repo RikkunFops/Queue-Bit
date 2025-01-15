@@ -23,7 +23,7 @@ class QbGuild:
 
 class Queue:
     """ Queue object to store queue information """
-    def __init__(self, guild, name, queue_type, identifier, min_size, max_size, global_queue, kwargs):
+    def __init__(self, guild, name, queue_type, identifier, min_size, max_size, global_queue, **kwargs):
         """ Initialize the queue object """
         self.guild: QbGuild = guild
         self.queue_name = name
