@@ -17,19 +17,23 @@ GuildList : QbGuild = {}
 GlobalQueues : Queue = {}
 
 def save_guilds():
+    """ Save the guilds to the database """
     while True:
         time.sleep(600)
         save_program(GuildList)
 
 
 class GuildWrapper(commands.Cog):
+    """ Guild commands for QuBit """
     __cog_name__ = 'Guild Commands'
 
     def __init__(self, bot: commands.Bot):
+        """ Initialize the GuildWrapper """
         self.bot = bot
         self.save_thread = None
 
     def load_guilds(self, load_dict):
+        """ Load the guilds from the database """
         for guild_id, guild_data in load_dict.items():
             discord_guild: QbGuild = self.bot.get_guild(guild_id)
 
@@ -68,6 +72,7 @@ class GuildWrapper(commands.Cog):
         self.save_thread.start()
 
     def new_guild(self, new_guild):
+        """ Add a new guild to the GuildList """
         for check_guild in list(GuildList.values()):
             if new_guild.id == check_guild.disc_guild.id:
                 return
@@ -76,6 +81,7 @@ class GuildWrapper(commands.Cog):
         standard_logger.info(f"Added new guild: {GuildList[new_guild.disc_guild.id]}")
 
     def check_user_queues(self, client: Client):
+        """ Check if a user is in a queue """
         guild_to_search = client.qb_guild
         for queues in guild_to_search.guild_queues:
             for user in queues.people_in_queue:
@@ -84,6 +90,7 @@ class GuildWrapper(commands.Cog):
         return False
 
     def check_user_parties(self, client: Client):
+        """ Check if a user is in a party """
         guild_to_search = client.qb_guild
         for party in list(guild_to_search.guild_parties.values()):
             if client.user == party.user:
@@ -94,6 +101,7 @@ class GuildWrapper(commands.Cog):
         return False
 
     def gen_global_id(self, queue, queue_bits=8):
+        """ Generate a global ID for a queue """
         guild = queue.guild
         queue_id = queue.queue_index
 
@@ -103,6 +111,7 @@ class GuildWrapper(commands.Cog):
         return (guild.id << queue_bits) | queue_id
 
     def decode_global_id(self, bitwise_id, queue_bits=8):
+        """ Decode a global ID into guild and queue IDs """
         guild_id = bitwise_id >> queue_bits
         queue_id = bitwise_id & ((1 << queue_bits) - 1)
 
@@ -117,6 +126,7 @@ class GuildWrapper(commands.Cog):
     async def add_queue(self, ctx: commands.Context, *, name: str = commands.parameter(description="Name of your queue."),
                         activity: str = commands.parameter(description="What are we queueing for?"),
                         lobbysize: int = commands.parameter(description="Minimum lobby size")):
+        """ Add a queue to the server """
         successful = None
         queuebit_guild = GuildList[ctx.guild.id]
         try:
@@ -137,6 +147,7 @@ class GuildWrapper(commands.Cog):
         brief="Join a queue"
     )
     async def join_queue(self, ctx: commands.Context, name: str = commands.parameter(description="Which queue?")):
+        """ Join a queue """
         guild_to_list: QbGuild = GuildList[ctx.guild.id]
         queue_to_join: Queue = None
         test_client = Client(user=ctx.author, queue=queue_to_join, ctx=ctx, guild=guild_to_list)
@@ -181,6 +192,7 @@ class GuildWrapper(commands.Cog):
 
     @join_queue.autocomplete('name')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
         for queue in guild_to_list.guild_queues:
@@ -194,6 +206,7 @@ class GuildWrapper(commands.Cog):
     )
     async def leaveQueue(self, 
                          ctx : commands.Context):
+        """ Leave a queue """
         guildToUse : QbGuild = GuildList[ctx.guild.id]
         ClientToCheck = Client(user=ctx.author, ctx=ctx, guild=guildToUse)
         results = self.check_user_parties(ClientToCheck)
@@ -237,6 +250,7 @@ class GuildWrapper(commands.Cog):
         description="List all queues for this server."
     )
     async def list_queue(self, ctx: commands.Context):
+        """ List all queues for the server """
         list_guild_queues = ''
         guild_to_list: QbGuild = GuildList[ctx.guild.id]
         
@@ -278,6 +292,7 @@ class GuildWrapper(commands.Cog):
         description="**Admin only** -- Remove a queue from the server.")
     @commands.has_permissions(administrator=True)
     async def remove_queue(self, ctx: commands.Context, name: str = commands.parameter(description="Name of the queue to remove.")):
+        """ Remove a queue from the server """
         guild_to_remove: QbGuild = GuildList[ctx.guild.id]
         for queue in guild_to_remove.guild_queues:
             if queue.queue_name == name:
@@ -292,6 +307,7 @@ class GuildWrapper(commands.Cog):
         error_logger.warning(f"Queue '{name}' not found in guild '{ctx.guild.name}'")
     @remove_queue.autocomplete('name')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
         if len(guild_to_list.guild_queues) == 0:
@@ -308,6 +324,7 @@ class GuildWrapper(commands.Cog):
     )
     @commands.has_permissions(administrator=True)
     async def changelobbysize(self, ctx: commands.Context, queuename: str = commands.param(description="Queue to Change"), size: int = commands.param(description="Minimum lobby size")):
+        """ Change the lobby size """
         guild_to_check = GuildList[ctx.guild.id]
 
         for queue in guild_to_check.guild_queues:
@@ -322,6 +339,7 @@ class GuildWrapper(commands.Cog):
 
     @changelobbysize.autocomplete('queuename')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
         if len(guild_to_list.guild_queues) == 0:
@@ -336,6 +354,7 @@ class GuildWrapper(commands.Cog):
         description="Create a party to queue together"
     )
     async def createparty(self, ctx: commands.Context, partyname: str):
+        """ Create a party """
         guild_to_use: QbGuild = GuildList[ctx.guild.id]
         client_check = Client(user=ctx.author, ctx=ctx, guild=guild_to_use)
         result = self.check_user_parties(client_check)
@@ -363,6 +382,7 @@ class GuildWrapper(commands.Cog):
         description="Join a party using the name"
     )
     async def joinparty(self, ctx: commands.Context, partyname: str):
+        """ Join a party """
         guild_to_use: QbGuild = GuildList[ctx.guild.id]
         if partyname in guild_to_use.guild_parties:
             new_client = Client(user=ctx.author, ctx=ctx, guild=guild_to_use)
@@ -384,6 +404,7 @@ class GuildWrapper(commands.Cog):
         description="Leave the party you are in."
     )
     async def leaveparty(self, ctx: commands.Context):
+        """ Leave a party """
         party_to_leave = self.check_user_parties(Client(user=ctx.author, ctx=ctx, guild=GuildList[ctx.guild.id]))
         if not party_to_leave:
             await ctx.send("You're not in a party!", ephemeral=True)
@@ -405,6 +426,7 @@ class GuildWrapper(commands.Cog):
         description="Get information on a party"
     )
     async def partyinfo(self, ctx: commands.Context):
+        """ Get party information """
         party_to_check = self.check_user_parties(Client(user=ctx.author, ctx=ctx, guild=GuildList[ctx.guild.id]))
         if not party_to_check:
             await ctx.send("You're not in a party!", ephemeral=True)
@@ -443,6 +465,7 @@ class GuildWrapper(commands.Cog):
         description="Get information on a queue"
     )
     async def queueinfo(self, ctx: commands.Context, queuename: str):
+        """ Get queue information """
         guild_to_use: QbGuild = GuildList[ctx.guild.id]
         for queue in guild_to_use.guild_queues:
             if queue.queue_name == queuename:
@@ -454,6 +477,7 @@ class GuildWrapper(commands.Cog):
 
     @queueinfo.autocomplete('queuename')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
         if len(guild_to_list.guild_queues) == 0:
@@ -469,6 +493,7 @@ class GuildWrapper(commands.Cog):
     )
     @commands.has_permissions(administrator=True)
     async def registerqueue(self, ctx: commands.Context, queuename: str):
+        """ Register a queue as global """
         guild_to_use: QbGuild = GuildList[ctx.guild.id]
         for queue in guild_to_use.guild_queues:
             if queue.queue_name == queuename:
@@ -482,6 +507,7 @@ class GuildWrapper(commands.Cog):
 
     @registerqueue.autocomplete('queuename')
     async def queuename_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """ Autocomplete the queue name """
         queue_names = []
         guild_to_list: QbGuild = GuildList[interaction.guild.id]
         if len(guild_to_list.guild_queues) == 0:
@@ -497,6 +523,7 @@ class GuildWrapper(commands.Cog):
         description="List all global queues."
     )
     async def listglobal(self, ctx: commands.Context):
+        """ List all global queues """
         global_queue_list = ''
 
         headers = ['Queue Name', 'Queue Subject', 'Lobby Size', 'No. people in Queue', 'Queue ID']
@@ -521,10 +548,12 @@ class GuildWrapper(commands.Cog):
 
     @add_queue.error
     async def add_queue_error(self, ctx: commands.Context, error: commands.CommandError):
+        """ Error handling for add_queue """
         if isinstance(error, commands.CommandError):
             await ctx.send("Sorry. Only admins can add queues.", ephemeral=True)
 
 async def setup(bot: commands.Bot):
+    """ Add the GuildWrapper cog to the bot """
     await bot.add_cog(GuildWrapper(bot))
 
 atexit.register(end_program, GuildList)
