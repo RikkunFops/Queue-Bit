@@ -1,4 +1,5 @@
 from logging.config import dictConfig
+import os
 import logging
 
 # Custom formatter to remove non-UTF-8 characters
@@ -65,6 +66,8 @@ LOGGING_CONFIG = {
     },
 }
 
+
+os.makedirs("app/logs", exist_ok=True)
 # Apply the configuration
 dictConfig(LOGGING_CONFIG)
 
