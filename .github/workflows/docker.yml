@@ -32,3 +32,16 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/queuebit:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/queuebit:${{ github.sha }}
+
+      # Step 5: Deploy to server
+      - name: Restart container
+        uses: appleboy/ssh-action@v0.1.10
+        with: 
+          host: ${{ secrets.DOCKER_IP }}
+          username : ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVKEY }}
+          script: |
+            cd /DockerContainer/
+            ./deply.sh
+              
+        
