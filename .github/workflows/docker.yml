@@ -41,7 +41,7 @@ jobs:
           username : ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVKEY }}
           script: |
-            cd /DockerContainer/
+            cd ./DockerContainer/
             ./deply.sh
               
         
