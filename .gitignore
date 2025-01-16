@@ -1,3 +1,5 @@
 \.env
 \Queue-Bit.code-workspace
 \__pycache__\*
+.dockerignore
+\logs\*
