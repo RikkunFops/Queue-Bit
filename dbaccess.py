@@ -1,6 +1,6 @@
 import os
 from urllib.parse import urlparse
-import mariadb
+import mysql.connector
 from dotenv import load_dotenv
 import settings
 
@@ -22,7 +22,7 @@ def get_conn():
         port = int(parsed_url.port)
         schema = parsed_url.path.lstrip("/")
         try:
-            conn = mariadb.connect(
+            conn = mysql.connector.connect(
                 user=user,
                 password=password,
                 host=host,
@@ -31,7 +31,7 @@ def get_conn():
             )
             standard_logger.info("Connection successful!")
             return conn
-        except mariadb.Error as e:
+        except mysql.connector.Error as e:
             error_logger.error("Error connecting to the database: %s", e)
     else:
         error_logger.error("DATABASE_URL is not set in the environment.")
@@ -52,7 +52,7 @@ def delete_queue(guild_id, queue_id):
                     error_logger.warning("No rows deleted. GuildId: %s, QueueId: %s", guild_id, queue_id)
                 else:
                     standard_logger.info("Queue deleted successfully.")
-    except mariadb.Error as e:
+    except mysql.connector.Error as e:
         error_logger.error("Database error: %s", e)
         raise
     except Exception as e:
@@ -72,7 +72,6 @@ def save_program(guild_dict):
                 INSERT INTO Guild (GuildId, OwnerId)
                 VALUES (%s, %s)
                 ON DUPLICATE KEY UPDATE
-                    GuildId = VALUES(GuildId),
                     OwnerId = VALUES(OwnerId)
                 """
                 error_logger.info("Inserting/updating guild: %s, %s", guild_id, guild.disc_guild.owner.id)
@@ -85,10 +84,8 @@ def save_program(guild_dict):
                         INSERT INTO queues (GuildId, QueueName, QueueId, QueueType, QueueMin, QueueMax, IsGlobal, GlobalID)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         ON DUPLICATE KEY UPDATE
-                            GuildId = VALUES(GuildId),
                             QueueName = VALUES(QueueName),
                             QueueType = VALUES(QueueType),
-                            QueueId = VALUES(QueueId),
                             QueueMin = VALUES(QueueMin),
                             QueueMax = VALUES(QueueMax),
                             IsGlobal = VALUES(IsGlobal),
@@ -107,7 +104,7 @@ def save_program(guild_dict):
             error_logger.info("Transaction committed successfully.")
         else:
             error_logger.error("No connection to the database.")
-    except mariadb.Error as e:
+    except mysql.connector.Error as e:
         error_logger.error("Error executing query: %s", e)
         if conn:
             conn.rollback()
@@ -119,61 +116,7 @@ def save_program(guild_dict):
 
 def end_program(guild_dict):
     """End the program and save data to the database."""
-    conn = get_conn()
-    try:
-        if conn:
-            standard_logger.info("Trying to get cursor")
-            cursor = conn.cursor()
-
-            for guild_id, guild in guild_dict.items():
-                guild_insert_or_update_query = """
-                INSERT INTO Guild (GuildId, OwnerId)
-                VALUES (%s, %s)
-                ON DUPLICATE KEY UPDATE
-                    GuildId = VALUES(GuildId),
-                    OwnerId = VALUES(OwnerId)
-                """
-                standard_logger.info("Inserting/updating guild: %s, %s", guild_id, guild.disc_guild.owner.id)
-                guild_values = (guild_id, guild.disc_guild.owner.id)
-                cursor.execute(guild_insert_or_update_query, guild_values)
-
-                if len(guild.guild_queues) > 0:
-                    for queue in guild.guild_queues:
-                        queue_insert_or_update_query = """
-                        INSERT INTO queues (GuildId, QueueName, QueueId, QueueType, QueueMin, QueueMax, IsGlobal, GlobalID)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                            GuildId = VALUES(GuildId),
-                            QueueName = VALUES(QueueName),
-                            QueueType = VALUES(QueueType),
-                            QueueId = VALUES(QueueId),
-                            QueueMin = VALUES(QueueMin),
-                            QueueMax = VALUES(QueueMax),
-                            IsGlobal = VALUES(IsGlobal),
-                            GlobalID = VALUES(GlobalID)
-                        """
-                        standard_logger.info(
-                            "Inserting/updating queue: GuildId=%s, QueueName=%s, QueueId=%s, QueueType=%s, QueueMax=%s, QueueMin=%s, IsGlobal=%s, GlobalID=%s",
-                            guild.disc_guild.id, queue.queue_name, queue.queue_index, queue.queue_type, queue.max_size, queue.min_size, queue.is_global, queue.global_id
-                        )
-                        queue_values = (
-                            guild.disc_guild.id, queue.queue_name, queue.queue_index, queue.queue_type, queue.min_size, queue.max_size, queue.is_global, queue.global_id
-                        )
-                        cursor.execute(queue_insert_or_update_query, queue_values)
-
-            conn.commit()
-            standard_logger.info("Transaction committed successfully.")
-        else:
-            standard_logger.error("No connection to the database.")
-    except mariadb.Error as e:
-        standard_logger.error("Error executing query: %s", e)
-        if conn:
-            conn.rollback()
-            standard_logger.error("Transaction rolled back.")
-    finally:
-        if conn:
-            conn.close()
-            standard_logger.warning("Database connection closed.")
+    save_program(guild_dict)
 
 async def get_list():
     """Get a list of guilds and their queues from the database."""
@@ -204,7 +147,7 @@ async def get_list():
                 guild_data['queues'] = queue_map.get(guild_id, [])
                 guild_dict[guild_id] = guild_data
 
-        except mariadb.Error as e:
+        except mysql.connector.Error as e:
             error_logger.error("Error retrieving entry from database: %s", e)
         finally:
             cursor.close()
