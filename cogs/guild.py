@@ -34,10 +34,10 @@ class GuildWrapper(commands.Cog):
         self.save_thread = None
 
     def load_guilds(self, load_dict):
-        # pylint: disable=too-many-locals
-        """ Load the guilds from the database """
+    # pylint: disable=too-many-locals
+        """Load the guilds from the database."""
         for guild_id, guild_data in load_dict.items():
-            discord_guild: QbGuild = self.bot.get_guild(guild_id)
+            discord_guild: QbGuild = self.bot.get_guild(int(guild_id))  # Ensure guild_id is an integer.
 
             if discord_guild:
                 # Create a Guild instance
@@ -55,20 +55,25 @@ class GuildWrapper(commands.Cog):
                         queue_max = queue_data['QueueMax']
                         queue_min = queue_data['QueueMin']
                         is_global = queue_data['IsGlobal']
-                        bool_glob = bool(is_global)
                         global_id = queue_data['GlobalID']
 
-                        if bool_glob:
-                            new_queue = Queue(guild=discord_guild, name=queue_name, queue_type=queue_type, identifier=queue_id, min_size=queue_min, max_size=queue_max, global_queue=True, global_id=global_id)
-                            standard_logger.info("%s | %s | %s", new_queue.queue_name, new_queue.queue_type, new_queue.queue_index)
-                            guild_instance.guild_queues.append(new_queue)
-                        else:
-                            new_queue = Queue(guild=discord_guild, name=queue_name, queue_type=queue_type, identifier=queue_id, min_size=queue_min, max_size=queue_max, global_queue=False)
-                            standard_logger.info("%s | %s | %s", new_queue.queue_name, new_queue.queue_type, new_queue.queue_index)
-                            guild_instance.guild_queues.append(new_queue)
+                        # Create a new Queue instance based on the queue data
+                        new_queue = Queue(
+                            guild=discord_guild,
+                            name=queue_name,
+                            queue_type=queue_type,
+                            identifier=queue_id,
+                            min_size=queue_min,
+                            max_size=queue_max,
+                            global_queue=bool(is_global),
+                            global_id=global_id if bool(is_global) else None
+                        )
+                        standard_logger.info("%s | %s | %s", new_queue.queue_name, new_queue.queue_type, new_queue.queue_index)
+                        guild_instance.guild_queues.append(new_queue)
 
                 # Add the guild instance to the GuildList
                 GuildList[guild_id] = guild_instance
+
 
         self.save_thread = threading.Thread(target=save_guilds, daemon=True)
         self.save_thread.start()

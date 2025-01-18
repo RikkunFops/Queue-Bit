@@ -25,19 +25,25 @@ guild_manager = GuildWrapper(disc_client)
 @disc_client.event
 async def on_ready():
     # pylint: disable=W0718
-    """ When the bot is ready """
+    """When the bot is ready."""
     try:
         await disc_client.add_cog(GuildWrapper(disc_client))
         synced = await disc_client.tree.sync()
         standard_logger.info("Synced: %d commands", len(synced))
-        load_dict = await get_list()
+
+        # Load guild data from the database
+        load_dict = await get_list()  # Ensures compatibility with MySQL
         guild_manager.load_guilds(load_dict)
+
+        # Initialize guilds in the client
         for guild in disc_client.guilds:
             guild_manager.new_guild(guild)
+
     except discord.DiscordException as e:
         error_logger.error("Discord exception occurred: %s", e)
     except Exception as e:
         error_logger.error("An unexpected error occurred: %s", e)
+
 
 
 @disc_client.event
