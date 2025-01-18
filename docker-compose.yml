@@ -1,0 +1,9 @@
+services:
+  ubuntu:
+    image: ubuntu:latest
+    container_name: ubuntu
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "database:172.17.0.1"
