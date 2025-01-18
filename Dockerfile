@@ -20,7 +20,7 @@ COPY . /app
 
 # Step 6: Install Python dependencies
 RUN python -m pip install --upgrade pip && \
-    python -m pip install pylint discord python-dotenv mariadb
+    python -m pip install pylint discord python-dotenv mysql-connector-python
 
 # Step 8: Set the command to run the application
 CMD ["python", "main.py"]
