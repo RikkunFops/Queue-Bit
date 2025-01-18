@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1
 
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libmariadb3 libmariadb-dev && \
+    apt-get install -y -f mysql\* && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

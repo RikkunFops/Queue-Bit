@@ -1,5 +1,4 @@
 import os
-from urllib.parse import urlparse
 import mysql.connector
 from dotenv import load_dotenv
 import settings
@@ -13,14 +12,12 @@ loaded_users = {}
 def get_conn():
     """Get a connection to the database."""
     load_dotenv()
-    database_url = os.getenv('DATABASE_URL')
-    if database_url:
-        parsed_url = urlparse(database_url)
-        user = parsed_url.username
-        password = parsed_url.password
-        host = parsed_url.hostname
-        port = int(parsed_url.port)
-        schema = parsed_url.path.lstrip("/")
+    if os.getenv('DB_USER'):
+        user = os.getenv('DB_USER')
+        password = os.getenv('DB_PASS')
+        host = os.getenv('DB_HOST')
+        port = os.getenv('DB_PORT')
+        schema = os.getenv('DB_SCHEMA')
         try:
             conn = mysql.connector.connect(
                 user=user,
