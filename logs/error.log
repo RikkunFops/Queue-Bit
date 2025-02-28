@@ -1,6 +1,0 @@
-INFO       - 2025-01-18 18:15:34,680 - dbaccess       : Inserting/updating guild: 504065935724773376, 373238356160544770
-INFO       - 2025-01-18 18:15:34,713 - dbaccess       : Inserting/updating guild: 891998653550579732, 585548631268917254
-INFO       - 2025-01-18 18:15:34,724 - dbaccess       : Inserting/updating guild: 1315670125621284929, 352491139863150593
-INFO       - 2025-01-18 18:15:34,735 - dbaccess       : Inserting/updating queue: GuildId=1315670125621284929, QueueName=TEST, QueueId=0, QueueType=mtg, QueueMax=4, QueueMin=4, IsGlobal=False, GlobalID=0
-INFO       - 2025-01-18 18:15:34,758 - dbaccess       : Transaction committed successfully.
-WARNING    - 2025-01-18 18:15:34,759 - dbaccess       : Database connection closed.

@@ -26,6 +26,7 @@ guild_manager = GuildWrapper(disc_client)
 async def on_ready():
     # pylint: disable=W0718
     """When the bot is ready."""
+    await disc_client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Discord's Matchmaker"))
     try:
         await disc_client.add_cog(GuildWrapper(disc_client))
         synced = await disc_client.tree.sync()
@@ -39,10 +40,10 @@ async def on_ready():
         for guild in disc_client.guilds:
             guild_manager.new_guild(guild)
 
+        standard_logger.info("Ready")
     except discord.DiscordException as e:
         error_logger.error("Discord exception occurred: %s", e)
-    except Exception as e:
-        error_logger.error("An unexpected error occurred: %s", e)
+
 
 
 
@@ -73,7 +74,7 @@ async def on_guild_join(guild: discord.Guild):
 async def support(ctx):
     """ Get support """
     await ctx.send(
-        "You can get support from @RikkunDev in https://discord.gg/keAWNkTg. \nPlease remember to be patient and respectful.",
+        "You can get support from @RikkunDev in https://discord.gg/qfNehTqwcH. \nPlease remember to be patient and respectful.",
         ephemeral=True,
     )
 
