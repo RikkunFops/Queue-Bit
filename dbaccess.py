@@ -76,10 +76,10 @@ def save_program(guild_dict):
                 cursor.execute(guild_insert_or_update_query, guild_values)
 
                 if len(guild.guild_queues) > 0:
-                    for queue in guild.guild_queues:
+                    for queue in list(guild.guild_queues.values()):
                         queue_insert_or_update_query = """
-                        INSERT INTO queues (GuildId, QueueName, QueueId, QueueType, QueueMin, QueueMax, IsGlobal, GlobalID)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO queues (GuildId, RootGuild, QueueName, QueueId, QueueType, QueueMin, QueueMax, IsGlobal, GlobalId)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON DUPLICATE KEY UPDATE
                             QueueName = VALUES(QueueName),
                             QueueType = VALUES(QueueType),
@@ -87,15 +87,38 @@ def save_program(guild_dict):
                             QueueMax = VALUES(QueueMax),
                             IsGlobal = VALUES(IsGlobal),
                             GlobalID = VALUES(GlobalID)
-                        """
+                    """
+
+                        # Logging for debugging
                         error_logger.info(
-                            "Inserting/updating queue: GuildId=%s, QueueName=%s, QueueId=%s, QueueType=%s, QueueMax=%s, QueueMin=%s, IsGlobal=%s, GlobalID=%s",
-                            guild.disc_guild.id, queue.queue_name, queue.queue_index, queue.queue_type, queue.max_size, queue.min_size, queue.is_global, queue.global_id
+                            "Inserting/updating queue: GuildId=%s, RootGuild=%s, QueueName=%s, QueueId=%s, QueueType=%s, QueueMin=%s, QueueMax=%s, IsGlobal=%s, GlobalID=%s",
+                            guild.disc_guild.id,  # GuildId
+                            queue.root_guild.id,  # RootGuild (Ensure this is correct)
+                            queue.queue_name,     # QueueName
+                            queue.queue_index,    # QueueId
+                            queue.queue_type,     # QueueType
+                            queue.min_size,       # QueueMin
+                            queue.max_size,       # QueueMax
+                            queue.is_global,      # IsGlobal
+                            queue.global_id       # GlobalID
                         )
+
+                        # Ensure queue_values has the correct number of parameters
                         queue_values = (
-                            guild.disc_guild.id, queue.queue_name, queue.queue_index, queue.queue_type, queue.min_size, queue.max_size, queue.is_global, queue.global_id
+                            guild.disc_guild.id,  # GuildId
+                            queue.root_guild.id,  # RootGuild
+                            queue.queue_name,     # QueueName
+                            queue.queue_index,    # QueueId
+                            queue.queue_type,     # QueueType
+                            queue.min_size,       # QueueMin
+                            queue.max_size,       # QueueMax
+                            queue.is_global,      # IsGlobal
+                            queue.global_id       # GlobalID
                         )
+
+                        # Execute the query
                         cursor.execute(queue_insert_or_update_query, queue_values)
+
 
             conn.commit()
             error_logger.info("Transaction committed successfully.")
@@ -128,7 +151,7 @@ async def get_list():
             cursor.execute(guild_statement)
             guilds = cursor.fetchall()
 
-            queue_statement = "SELECT GuildId, QueueId, QueueName, QueueType, QueueMin, QueueMax, IsGlobal, GlobalID FROM queues"
+            queue_statement = "SELECT GuildId, RootGuild, QueueId, QueueName, QueueType, QueueMin, QueueMax, IsGlobal, GlobalID FROM queues"
             cursor.execute(queue_statement)
             queues = cursor.fetchall()
 
