@@ -71,18 +71,29 @@ async def on_guild_join(guild: discord.Guild):
     brief="Get support",
     description="Get details on how to find bot support",
 )
-async def support(ctx):
+async def support(ctx: commands.Context):
     """ Get support """
     await ctx.send(
         "You can get support from @RikkunDev in https://discord.gg/qfNehTqwcH. \nPlease remember to be patient and respectful.",
         ephemeral=True,
     )
 
+@disc_client.hybrid_command(
+        name="quickstart",
+        brief="Learn the essential commands",
+        description="Get a list of all the essential commands, and how to use them."
+)
+async def quickstart(ctx: commands.Context):
+    """ Post the quickstart info """
+    await ctx.send(
+        "To add a queue, use /addqueue like this;\n     `/addqueue [queuename] [activity] [lobbysize]`\nTo join a queue, use\n      `/joinqueue [queuename]`\nTo subscribe to a global queue, use\n     `/subqueue [code]`\nTo register a queue globally, use\n      `/regqueue [queuename]`",
+        ephemeral=True
+    )
 
 @disc_client.hybrid_command()
 async def ping(ctx: commands.Context):
     """ Get the bot's latency """
-    await ctx.send(f"Responded <t:{int(time.mktime(ctx.interaction.created_at.timetuple()))}:T> ago")
+    await ctx.send(f"Pinged <t:{int(time.mktime(ctx.interaction.created_at.timetuple()))}:T> ago")
 
 
 disc_client.run(TOKEN, root_logger=True)
