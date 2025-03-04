@@ -90,6 +90,8 @@ def save_program(guild_dict):
                     """
 
                         # Logging for debugging
+                        if queue.root_guild == None:
+                            queue.root_guild = queue.guild
                         error_logger.info(
                             "Inserting/updating queue: GuildId=%s, RootGuild=%s, QueueName=%s, QueueId=%s, QueueType=%s, QueueMin=%s, QueueMax=%s, IsGlobal=%s, GlobalID=%s",
                             guild.disc_guild.id,  # GuildId
