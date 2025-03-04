@@ -66,7 +66,7 @@ class GuildWrapper(commands.Cog):
                         new_queue = Queue(
                             guild=discord_guild,
                             name=queue_name,
-                            owner = self.bot.get_guild(int(root)),
+                            owner = self.bot.get_guild(int(root)) if root is not None else discord_guild,
                             queue_type=queue_type,
                             identifier=queue_id,
                             min_size=queue_min,
@@ -514,6 +514,7 @@ class GuildWrapper(commands.Cog):
         """ Register a queue as global """
         guild_to_use: QbGuild = GuildList[ctx.guild.id]
         queue = guild_to_use.guild_queues[queuename]
+
         if queue:
             queue.global_id = self.gen_global_id(queue)
             if queue.global_id in GlobalQueues:
@@ -545,8 +546,8 @@ class GuildWrapper(commands.Cog):
     async def listglobal(self, ctx: commands.Context):
         """ List all global queues """
         global_queue_list = ''
-        headers = ['Queue Name', 'Queue Subject', 'Lobby Size', 'No. people in Queue', 'Queue Code', 'Queue ID']
-        col_widths = [15, 20, 15, 20, 15, 25]
+        headers = ['Queue Name', 'Queue Subject', 'Lobby Size', 'No. people in Queue', 'Queue Code']
+        col_widths = [15, 20, 15, 20, 15]
         global_queue_list = ''.join([f"{header:^{col_widths[i]}}" for i, header in enumerate(headers)])
         if len(GlobalQueues) == 0:
             await ctx.send("No global queues found!", ephemeral=True)
@@ -558,7 +559,6 @@ class GuildWrapper(commands.Cog):
                 f"{queue.min_size:^{col_widths[2]}}",
                 f"{len(queue.people_in_queue):^{col_widths[3]}}",
                 f"{encode_base62(int(queue.global_id)):^{col_widths[4]}}"
-                f"{queue.global_id:^{col_widths[5]}}"
             ])
             global_queue_list += '\n' + row
         await ctx.send(f"```{global_queue_list}```", ephemeral=True)
