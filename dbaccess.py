@@ -90,11 +90,11 @@ def save_program(guild_dict):
                     """
 
                         # Logging for debugging
-                        if queue.root_guild == None:
+                        if queue.root_guild is None:
                             queue.root_guild = queue.guild
                         error_logger.info(
                             "Inserting/updating queue: GuildId=%s, RootGuild=%s, QueueName=%s, QueueId=%s, QueueType=%s, QueueMin=%s, QueueMax=%s, IsGlobal=%s, GlobalID=%s",
-                            guild.disc_guild.id,  # GuildId
+                            queue.guild.disc_guild.id,  # GuildId
                             queue.root_guild.id,  # RootGuild (Ensure this is correct)
                             queue.queue_name,     # QueueName
                             queue.queue_index,    # QueueId
@@ -107,7 +107,7 @@ def save_program(guild_dict):
 
                         # Ensure queue_values has the correct number of parameters
                         queue_values = (
-                            guild.disc_guild.id,  # GuildId
+                            queue.guild.disc_guild.id,  # GuildId
                             queue.root_guild.id,  # RootGuild
                             queue.queue_name,     # QueueName
                             queue.queue_index,    # QueueId
