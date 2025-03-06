@@ -64,7 +64,7 @@ class GuildWrapper(commands.Cog):
 
                         # Create a new Queue instance based on the queue data
                         new_queue = Queue(
-                            guild=discord_guild,
+                            guild=guild_instance,
                             name=queue_name,
                             owner = self.bot.get_guild(int(root)) if root is not None else discord_guild,
                             queue_type=queue_type,
@@ -77,7 +77,7 @@ class GuildWrapper(commands.Cog):
 
                         standard_logger.info("      %-10s | %-10s | %-10s", new_queue.queue_name.center(10), new_queue.queue_type.center(10), str(new_queue.queue_index).center(10))
                         guild_instance.guild_queues[queue_name] = new_queue
-                        if new_queue.is_global and new_queue.guild.id == new_queue.root_guild.id:
+                        if new_queue.is_global and new_queue.guild.disc_guild.id == new_queue.root_guild.id:
                             global_queues.append(new_queue)
 
                 # Add the guild instance to the GuildList
@@ -103,7 +103,7 @@ class GuildWrapper(commands.Cog):
             row = ''.join([
                 f"{queue.queue_name:^{col_widths[0]}}",
                 f"{queue.min_size:^{col_widths[1]}}",
-                f"{queue.guild.name:^{col_widths[2]}}",
+                f"{queue.guild.disc_guild.name:^{col_widths[2]}}",
                 f"{queue.global_id:^{col_widths[3]}}"
             ])
             list_global_queues += '\n' + row

@@ -57,12 +57,12 @@ async def on_guild_join(guild: discord.Guild):
         if entry.target.id == disc_client.user.id:
             if mem == guild.owner:
                 await mem.send(
-                    "Thank you for inviting me. \nHi, I'm QuBit! \nI'm a bot designed to help you and your members matchmake and queue up for games. \nJoin the support server at https://discord.gg/keAWNkTg for help and updates."
+                    "Thank you for inviting me. \nHi, I'm QuBit! \nI'm a bot designed to help you and your members matchmake and queue up for games. \nJoin the support server at https://discord.gg/qfNehTqwcH for help and updates."
                 )
             else:
                 await mem.send("Thank you for inviting me")
                 await guild.owner.send(
-                    "I was added to your server! \nHi, I'm QuBit! \nI'm a bot designed to help you and your members matchmake and queue up for games. \nJoin the support server at https://discord.gg/keAWNkTg for help and updates."
+                    "I was added to your server! \nHi, I'm QuBit! \nI'm a bot designed to help you and your members matchmake and queue up for games. \nJoin the support server at https://discord.gg/qfNehTqwcH for help and updates."
                 )
 
 
