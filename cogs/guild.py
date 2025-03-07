@@ -139,7 +139,7 @@ class GuildWrapper(commands.Cog):
         if queue_id >= (1 << queue_bits):
             raise ValueError("Queue ID exceeds the maximum value for the given number of bits")
 
-        return (guild.id << queue_bits) | queue_id
+        return (guild.disc_guild.id << queue_bits) | queue_id
 
     def decode_global_id(self, bitwise_id, queue_bits=8):
         """ Decode a global ID into guild and queue IDs """
